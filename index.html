@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BLOX FRUITS - BATAK NPC PLAYERS</title>
+<script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"></script>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }</script>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}body{overflow:hidden;background:#87ceeb;font-family:Orbitron}
+#menu{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#020611;color:#7ef9ff;z-index:10;text-align:center}
+.enter{margin-top:15px;padding:14px 40px;font-size:20px;font-weight:900;border-radius:12px;background:#00ff88;border:none;cursor:pointer;color:#000}
+#world{width:100vw;height:100vh;position:relative;display:none}
+#gameCanvas{width:100%;height:100%;display:block;cursor:crosshair}
+#hud{position:absolute;top:8px;left:8px;right:8px;display:flex;justify-content:space-between;background:rgba(0,0,0,0.85);color:#00ff88;font-size:10px;padding:6px 10px;border-radius:6px}
+#skills{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:6px;background:rgba(0,0,0,0.85);padding:8px;border-radius:10px;border:2px solid gold}
+.skill{width:60px;height:60px;border:1px solid #333;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:8px;color:#fff;cursor:pointer}
+.skill.hasFruit{border-color:gold;box-shadow:0 0 8px gold;background:rgba(255,215,0,0.15)}
+.skill.noFruit{opacity:0.25}
+.skill.cooldown{opacity:0.15}
+.skill.selected{border-color:#00ff88!important;border-width:3px!important;box-shadow:0 0 15px #00ff88!important;background:rgba(0,255,136,0.35)!important;transform:scale(1.1)}
+.skill b{font-size:11px;color:gold}
+#bossBar{position:absolute;top:50px;left:50%;transform:translateX(-50%);width:360px;background:rgba(0,0,0,0.9);border:2px solid #00ffff;border-radius:8px;padding:6px;display:none}
+#bossHpFill{height:14px;background:linear-gradient(90deg,#00ffff,#0088ff);width:100%;transition:width 0.2s}
+#inventory{position:absolute;top:50px;right:8px;width:210px;background:rgba(0,0,0,0.92);border:2px solid gold;border-radius:10px;padding:8px;display:none}
+.invSlot{width:42px;height:42px;border:1px solid #555;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;margin:2px;cursor:pointer;font-size:20px}
+.invSlot.has{border-color:gold;background:rgba(255,215,0,0.25)}
+.invSlot.mythic{border-color:#ff00ff;box-shadow:0 0 6px #ff00ff;background:rgba(255,0,255,0.2)}
+#gacha{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:360px;background:rgba(0,0,0,0.95);border:2px solid #ff00ff;border-radius:12px;padding:15px;text-align:center;display:none;z-index:5}
+#fruitSpawn{position:absolute;top:90px;left:8px;background:rgba(0,0,0,0.85);border:2px solid #00ff88;color:#00ff88;padding:8px;border-radius:8px;font-size:10px}
+#combat{position:absolute;bottom:8px;left:8px;background:rgba(0,0,0,0.85);color:#fff;padding:10px;border-radius:8px;font-size:9px;min-width:290px;border:1px solid #ff0044}
+#hit{position:absolute;inset:0;background:red;opacity:0;pointer-events:none}
+#aimDot{position:absolute;width:22px;height:22px;border:2px solid #00ff88;border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);z-index:3;box-shadow:0 0 8px #00ff88}
+#aimDot::after{content:'';position:absolute;top:50%;left:50%;width:5px;height:5px;background:#00ff88;border-radius:50%;transform:translate(-50%,-50%)}
+#selectedInfo{position:absolute;top:50%;left:50%;transform:translate(-50%,-80px);background:rgba(0,255,136,0.9);color:#000;padding:8px 16px;border-radius:20px;font-size:11px;font-weight:900;display:none;z-index:4}
+#camHint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(255,255,0,0.9);color:#000;padding:8px 16px;border-radius:20px;font-size:10px;font-weight:900;display:none;pointer-events:none}
+#batakList{position:absolute;top:90px;right:8px;background:rgba(0,0,0,0.9);border:2px solid #ff0044;padding:8px;border-radius:8px;font-size:9px;color:#ff4444;max-width:210px}
+  #mobileUI{position:fixed;bottom:0;left:0;width:100%;height:180px;pointer-events:none;z-index:99}
+  #leftJoy{position:absolute;left:20px;bottom:20px;pointer-events:auto}
+  #rightBtns{position:absolute;right:20px;bottom:20px;display:flex;flex-direction:column;gap:15px;pointer-events:auto}
+ .joystick{width:120px;height:120px;background:rgba(255,255,255,0.15);border-radius:50%;border:2px solid rgba(255,255,255,0.2);position:relative}
+ .stick{width:55px;height:55px;background:rgba(255,255,255,0.6);border-radius:50%;position:absolute;left:32px;top:32px}
+ .mBtn{width:70px;height:70px;background:#ff4757;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;border:2px solid white}
+  @media(min-width:900px){#mobileUI{display:none}} /* TATAGO SA LAPTOP */
+</style>
+</head>
+<body>
+<div id="menu">
+  <h1>BLOX FRUITS <span style="display:block;font-size:13px;color:#ff0044">BATAK NPC PLAYERS ADDED!</span></h1>
+  <p style="font-size:11px;color:#aaa;margin-top:8px">May mga level 2550 na player na kalaban! May Dough, Dragon, Kitsune!</p>
+  <button class="enter" onclick="enterWorld()">ENTER BATAK NPC WORLD</button>
+</div>
+
+<div id="world">
+  <div id="hit"></div>
+  <div id="aimDot"></div>
+  <div id="selectedInfo">SELECTED: Z - LEFT CLICK TO CAST!</div>
+  <div id="camHint">RIGHT HOLD + MOVE TO ROTATE!</div>
+  <canvas id="gameCanvas"></canvas>
+  <div id="hud"><div>ISLAND: <span id="currentIsland">Starter 10x</span> | LVL <span id="lvl">5</span> | FRUIT: <span id="currentFruitDisplay" style="color:gold">NONE</span></div><div>HP <span id="hp" style="color:red">100</span> | <span id="invCount">0 Fruit</span> | <span id="castMode" style="color:#00ff88">Pili skill Z X C V</span></div></div>
+  <div id="fruitSpawn">🍎 SPAWN: <span id="spawnTimer">60s</span><br><span id="spawnStatus" style="color:yellow">Waiting...</span></div>
+  <div id="batakList"><b style="color:#ff0044">🔥 BATAK PLAYERS SA SERVER:</b><br><div id="batakNames"></div></div>
+  <div id="bossBar"><div style="font-size:11px;color:#00ffff;text-align:center" id="bossName">BOSS</div><div id="bossHpFill"></div><div style="font-size:9px;color:#fff;text-align:center" id="bossHpText">1000/1000</div></div>
+  <div id="inventory"><b style="color:gold;font-size:10px">🎒 INVENTORY (I)</b><br><div id="invSlots"></div><button onclick="document.getElementById('inventory').style.display='none'" style="margin-top:6px;padding:4px 10px;font-size:8px">CLOSE</button></div>
+  <div id="gacha"><b style="color:#ff00ff;font-size:14px">🎰 MYTHIC GACHA</b><br><div id="gachaResult" style="font-size:20px;margin:10px;min-height:30px"></div><button onclick="rollGacha()" style="padding:8px 20px;background:#ff00ff;border:none;border-radius:8px;color:#fff;font-weight:900;cursor:pointer">ROLL (2 LVL)</button><br><button onclick="document.getElementById('gacha').style.display='none'" style="margin-top:8px;padding:4px 10px;font-size:9px">CLOSE</button></div>
+  <div id="skills">
+    <div class="skill noFruit" id="skillZ" onclick="selectSkill('Z')"><b>Z</b><span id="skillZName">No Fruit</span></div>
+    <div class="skill noFruit" id="skillX" onclick="selectSkill('X')"><b>X</b><span id="skillXName">No Fruit</span></div>
+    <div class="skill noFruit" id="skillC" onclick="selectSkill('C')"><b>C</b><span id="skillCName">No Fruit</span></div>
+    <div class="skill noFruit" id="skillV" onclick="selectSkill('V')"><b>V</b><span id="skillVName">No Fruit</span></div>
+    <div class="skill" id="skillF"><b>F</b>Melee</div>
+  </div>
+  <div id="combat"><b style="color:#ff0044">BATAK NPC PLAYERS:</b><br>🔥 Mga level 2550 may Mythic fruits!<br>⚔️ Lalapit sayo + mag ca-cast ng skills!<br>💀 Pag napatay mo +10 LVL agad!<br><b>WASD</b>=Galaw | <b>Z X C V</b>=Select | <b>Left</b>=Cast<br><b>Right Hold</b>=Liko cam | <b>F</b>=Melee<br><span id="enemyInfo" style="color:#ff4444">May batak na papalapit!</span></div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+let scene,camera,renderer,player,keys={},yaw=0,pitch=0,inBoat=false,boat=null,enemies=[],seaBeasts=[],playerHP=100,level=5,currentFruit=null,skillCooldown={},activeBoss=null,projectiles=[],hitEffects=[],damageTexts=[],inventory=[],fruitSpawns=[],spawnCooldown=60;
+let raycaster=new THREE.Raycaster(), mouse=new THREE.Vector2(), isRightDown=false, selectedSkill=null;
+let batakPlayers=[];
+
+const FRUITS={
+  bomb:{name:"Bomb", emoji:"💣", color:0x444444, rarity:"Common", skills:{Z:"Bomb Toss", X:"Mine Field", C:"Big Bomb", V:"Bomb Jump"}},
+  spike:{name:"Spike", emoji:"🌵", color:0x666666, rarity:"Common", skills:{Z:"Spike Shot", X:"Spike Trap", C:"Spike Ball", V:"Spike Dash"}},
+  flame:{name:"Flame", emoji:"🔥", color:0xff4400, rarity:"Rare", skills:{Z:"Fire Bullets", X:"Flame Flight", C:"Fireball", V:"Flame Dash"}},
+  ice:{name:"Ice", emoji:"❄️", color:0xaaddff, rarity:"Rare", skills:{Z:"Ice Spears", X:"Ice Floor", C:"Ice Shard", V:"Ice Dash"}},
+  portal:{name:"Portal", emoji:"🌀", color:0x00ffff, rarity:"Legendary", skills:{Z:"Portal Dash", X:"Portal Barrage", C:"Portal Punch", V:"Dimensional Rift"}},
+  light:{name:"Light", emoji:"✨", color:0xffffaa, rarity:"Legendary", skills:{Z:"Light Kick", X:"Light Beam", C:"Light Shower", V:"Light Flight"}},
+  dragon:{name:"Dragon", emoji:"🐉", color:0xcc0000, rarity:"Mythical", skills:{Z:"Dragon Claw", X:"Dragon Roar", C:"Dragon Breath", V:"Dragon Flight"}},
+  dough:{name:"Dough", emoji:"🍩", color:0xffcc99, rarity:"Mythical", skills:{Z:"Dough Punch", X:"Dough Roll", C:"Dough Smash", V:"Dough Escape"}},
+  kitsune:{name:"Kitsune", emoji:"🦊", color:0xff88ff, rarity:"Mythical", skills:{Z:"Fox Fire", X:"Tails Attack", C:"Kitsune Blast", V:"Nine Tails Flight"}},
+  leopard:{name:"Leopard", emoji:"🐆", color:0xffaa00, rarity:"Mythical", skills:{Z:"Leopard Slash", X:"Beast Roar", C:"Predator Strike", V:"Leopard Dash"}},
+  venom:{name:"Venom", emoji:"🧪", color:0x8800ff, rarity:"Mythical", skills:{Z:"Poison Spray", X:"Venom Pool", C:"Toxic Blast", V:"Venom Escape"}},
+  shadow:{name:"Shadow", emoji:"🌑", color:0x222222, rarity:"Mythical", skills:{Z:"Shadow Claw", X:"Shadow Ball", C:"Shadow Realm", V:"Shadow Step"}},
+  control:{name:"Control", emoji:"🕹️", color:0xff0066, rarity:"Mythical", skills:{Z:"Control Throw", X:"Area Control", C:"Control Crush", V:"Control Teleport"}},
+  gravity:{name:"Gravity", emoji:"🌌", color:0x6600cc, rarity:"Mythical", skills:{Z:"Gravity Pull", X:"Meteor Rain", C:"Gravity Crush", V:"Zero Gravity"}},
+};
+
+const BATAK_DATA=[
+  {name:"xX_DoughKing_Xx", lvl:2550, fruit:"dough", color:0xffcc99, title:"DOUGH GOD", bounty:"30M"},
+  {name:"Dragon_Master_PH", lvl:2550, fruit:"dragon", color:0xcc0000, title:"DRAGON GOD", bounty:"29.5M"},
+  {name:"Kitsune_Girl_Op", lvl:2520, fruit:"kitsune", color:0xff88ff, title:"KITSUNE QUEEN", bounty:"28M"},
+  {name:"Leopard_Batak", lvl:2500, fruit:"leopard", color:0xffaa00, title:"BEAST GOD", bounty:"27M"},
+  {name:"Shadow_Reaper", lvl:2450, fruit:"shadow", color:0x222222, title:"SHADOW LORD", bounty:"25M"},
+  {name:"Gravity_Crusher", lvl:2400, fruit:"gravity", color:0x6600cc, title:"GRAVITY GOD", bounty:"24M"},
+];
+
+const ISLANDS=[
+  {name:"Starter 10x", x:0, z:0, size:1200, height:20, color:0x2d8a4e},
+  {name:"Jungle 10x", x:4000, z:-800, size:1300, height:28, color:0x0a4d1a, boss:"Gorilla King"},
+  {name:"Pirate 10x", x:-4000, z:-1000, size:1200, height:18, color:0x8a6d2d},
+  {name:"Desert 10x", x:0, z:4000, size:1400, height:14, color:0xd9c08c, boss:"Desert Officer"},
+];
+
+function getInfo(x,z){ for(let is of ISLANDS){ const d=Math.sqrt((x-is.x)**2+(z-is.z)**2); if(d < is.size-20) return {h:is.height-1, inside:true, name:is.name}; } return {h:-1, inside:false, name:"Ocean"}; }
+
+function createBatakPlayer(x,z,h,data){
+  const g=new THREE.Group();
+  const body=new THREE.Mesh(new THREE.BoxGeometry(2,3.8,2), new THREE.MeshLambertMaterial({color:data.color}));
+  body.position.y=1.9; g.add(body);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(1,8,8), new THREE.MeshLambertMaterial({color:0xffdbac}));
+  head.position.y=4.5; g.add(head);
+  // fruit aura
+  const aura=new THREE.Mesh(new THREE.SphereGeometry(2.5,8,8), new THREE.MeshBasicMaterial({color:data.color, transparent:true, opacity:0.3}));
+  aura.position.y=2; g.add(aura);
+  // name tag
+  const canvas=document.createElement('canvas'); canvas.width=512; canvas.height=128;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle="rgba(0,0,0,0.8)"; ctx.fillRect(0,0,512,128);
+  ctx.fillStyle="#ff4444"; ctx.font="bold 22px Arial"; ctx.fillText(`${data.name}`,10,30);
+  ctx.fillStyle="#ffcc00"; ctx.font="bold 16px Arial"; ctx.fillText(`LVL ${data.lvl} - ${data.title} - ${data.bounty}`,10,55);
+  ctx.fillStyle=`#${data.color.toString(16).padStart(6,'0')}`; ctx.font="bold 14px Arial"; ctx.fillText(`${FRUITS[data.fruit].emoji} ${FRUITS[data.fruit].name} Main`,10,75);
+  const tex=new THREE.CanvasTexture(canvas);
+  const tagMat=new THREE.SpriteMaterial({map:tex});
+  const tag=new THREE.Sprite(tagMat); tag.position.set(0,7,0); tag.scale.set(14,3.5,1); g.add(tag);
+  const hpBar=new THREE.Mesh(new THREE.PlaneGeometry(5,0.5), new THREE.MeshBasicMaterial({color:0xff0000, side:THREE.DoubleSide}));
+  hpBar.position.set(0,6,0); hpBar.name="hpBar"; g.add(hpBar);
+  g.position.set(x,h+0.2,z);
+  g.userData={type:data.name, isBatak:true, fruit:data.fruit, lvl:data.lvl, hp:400, maxHP:400, lastSkill:0, bounty:data.bounty, color:data.color, title:data.title};
+  return g;
+}
+
+function createEnemy(x,z,h,type,color){ const g=new THREE.Group(); const body=new THREE.Mesh(new THREE.BoxGeometry(1.8,3,1.8), new THREE.MeshLambertMaterial({color:color})); body.position.y=1.5; g.add(body); const hp=new THREE.Mesh(new THREE.PlaneGeometry(3,0.3), new THREE.MeshBasicMaterial({color:0x00ff00, side:THREE.DoubleSide})); hp.position.set(0,4.5,0); hp.name="hpBar"; g.add(hp); g.position.set(x,h+0.2,z); g.userData={type:type, hp:100, maxHP:100, isBoss:false, isSea:false, isBatak:false}; return g; }
+function createBoss(x,z,h,type){ const hp=600; const s=3.8; const g=new THREE.Group(); const body=new THREE.Mesh(new THREE.BoxGeometry(s, s*1.7, s), new THREE.MeshLambertMaterial({color:0x5a2a0a})); body.position.y=s*0.85; g.add(body); const hpBar=new THREE.Mesh(new THREE.PlaneGeometry(7,0.7), new THREE.MeshBasicMaterial({color:0xff0000, side:THREE.DoubleSide})); hpBar.position.set(0,s*3.4,0); hpBar.name="hpBar"; g.add(hpBar); g.position.set(x,h+0.2,z); g.userData={type:type, hp:hp, maxHP:hp, isBoss:true, isSea:false, isBatak:false}; return g; }
+function createSeaBeast(x,z){ const g=new THREE.Group(); const head=new THREE.Mesh(new THREE.SphereGeometry(7,10,8), new THREE.MeshLambertMaterial({color:0x003300})); head.position.set(0,5,0); g.add(head); for(let i=0;i<5;i++){ const seg=new THREE.Mesh(new THREE.SphereGeometry(5.5-i*0.6,8,6), new THREE.MeshLambertMaterial({color:0x004400})); seg.position.set(0,3,-9-i*7); g.add(seg); } const hpBar=new THREE.Mesh(new THREE.PlaneGeometry(12,1.2), new THREE.MeshBasicMaterial({color:0x00ffff, side:THREE.DoubleSide})); hpBar.position.set(0,14,0); hpBar.name="hpBar"; g.add(hpBar); g.position.set(x,1,z); g.userData={type:"SEA BEAST", hp:1000, maxHP:1000, isBoss:true, isSea:true, isBatak:false}; return g; }
+function createFruitMesh(x,z,h,fruitKey){ const fd=FRUITS[fruitKey]; const g=new THREE.Group(); const fruit=new THREE.Mesh(new THREE.SphereGeometry(3.5,10,10), new THREE.MeshLambertMaterial({color:fd.color})); fruit.position.y=4; g.add(fruit); const glow=new THREE.Mesh(new THREE.SphereGeometry(5,10,10), new THREE.MeshBasicMaterial({color:fd.color, transparent:true, opacity:0.35})); glow.position.y=4; g.add(glow); const beam=new THREE.Mesh(new THREE.CylinderGeometry(0.3,1.5,30,6), new THREE.MeshBasicMaterial({color:fd.color, transparent:true, opacity:0.4})); beam.position.y=18; g.add(beam); g.position.set(x,h+0.2,z); g.userData={isFruit:true, fruitKey:fruitKey, fruitName:fd.name}; return g; }
+function createHitEffect(pos, color=0xff4400){ for(let i=0;i<12;i++){ const p=new THREE.Mesh(new THREE.SphereGeometry(0.45,4,4), new THREE.MeshBasicMaterial({color:color})); p.position.copy(pos); p.userData={vel:new THREE.Vector3((Math.random()-0.5)*4, Math.random()*3+0.5, (Math.random()-0.5)*4), life:26}; scene.add(p); hitEffects.push(p); } const hitDiv=document.getElementById('hit'); hitDiv.style.opacity="0.3"; setTimeout(()=>hitDiv.style.opacity="0",90); }
+function createDamageText(pos, dmg, isBatak=false){ const canvas=document.createElement('canvas'); canvas.width=160; canvas.height=64; const ctx=canvas.getContext('2d'); ctx.fillStyle=isBatak?"#ff4444":"#ffffff"; ctx.font=isBatak?"bold 32px Orbitron":"bold 30px Orbitron"; ctx.strokeStyle="#000"; ctx.lineWidth=3; ctx.strokeText(`${isBatak?'-':''}${dmg}${isBatak?'!':''}`,10,42); ctx.fillText(`${isBatak?'-':''}${dmg}${isBatak?'!':''}`,10,42); const tex=new THREE.CanvasTexture(canvas); const mat=new THREE.SpriteMaterial({map:tex}); const sprite=new THREE.Sprite(mat); sprite.position.copy(pos).add(new THREE.Vector3(0,7,0)); sprite.scale.set(isBatak?12:10,5,1); sprite.userData={life:50, vel:new THREE.Vector3(0,0.2,0)}; scene.add(sprite); damageTexts.push(sprite); }
+function createProj(start, dir, color, dmg, life=90, isBatak=false){ const size=isBatak?1.6:1; const b=new THREE.Mesh(new THREE.SphereGeometry(size,8,8), new THREE.MeshBasicMaterial({color:color})); b.position.copy(start); b.userData={dir:dir.clone(), life:life, dmg:dmg, isBatak:isBatak}; scene.add(b); projectiles.push(b); return b; }
+
+window.enterWorld=()=>{ document.getElementById('menu').style.display='none'; document.getElementById('world').style.display='block'; init(); }
+window.rollGacha=()=>{
+  if(level<2){ document.getElementById('gachaResult').innerText="Kulang LVL! Need 2 LVL"; return; }
+  level-=2; document.getElementById('lvl').innerText=level;
+  const keys=Object.keys(FRUITS); const weights={bomb:30, spike:30, flame:15, ice:15, portal:5, light:5, dragon:0.5, dough:0.5, kitsune:0.5, leopard:0.5, venom:0.5, shadow:0.5, control:0.5, gravity:0.5};
+  let total=0; keys.forEach(k=>total+=weights[k]); let r=Math.random()*total; let chosen=keys[0];
+  for(let k of keys){ r-=weights[k]; if(r<=0){ chosen=k; break; } }
+  inventory.push(chosen); updateInventoryUI();
+  document.getElementById('gachaResult').innerHTML=`Nakuha mo:<br>${FRUITS[chosen].emoji} <b>${FRUITS[chosen].name}</b>`;
+}
+function eatFruit(fruitKey){
+  if(currentFruit){ if(!confirm(`Kakain ka ng ${FRUITS[fruitKey].name}?`)) return; }
+  currentFruit=fruitKey;
+  document.getElementById('currentFruitDisplay').innerText=FRUITS[fruitKey].name.toUpperCase();
+  document.getElementById('currentFruitDisplay').style.color=`#${FRUITS[fruitKey].color.toString(16).padStart(6,'0')}`;
+  const index = inventory.indexOf(fruitKey); if(index!== -1){ inventory.splice(index, 1); }
+  updateInventoryUI(); updateSkillUI();
+  createHitEffect(player.position, FRUITS[fruitKey].color);
+}
+function updateInventoryUI(){ const cont=document.getElementById('invSlots'); cont.innerHTML=""; document.getElementById('invCount').innerText=`${inventory.length} Fruit`; inventory.forEach((key)=>{ const f=FRUITS[key]; const div=document.createElement('div'); div.className=f.rarity==='Mythical'?"invSlot mythic":"invSlot has"; div.innerText=f.emoji; div.onclick=()=>eatFruit(key); cont.appendChild(div); }); for(let i=inventory.length;i<12;i++){ const div=document.createElement('div'); div.className="invSlot"; cont.appendChild(div); } }
+function updateSkillUI(){
+  if(!currentFruit){ ['Z','X','C','V'].forEach(s=>{ const el=document.getElementById('skill'+s); const nameEl=document.getElementById('skill'+s+'Name'); if(el){ el.classList.add('noFruit'); el.classList.remove('hasFruit'); } if(nameEl) nameEl.innerText="No Fruit"; }); }
+  else { const fd=FRUITS[currentFruit]; ['Z','X','C','V'].forEach(s=>{ const el=document.getElementById('skill'+s); const nameEl=document.getElementById('skill'+s+'Name'); if(el){ el.classList.remove('noFruit'); el.classList.add('hasFruit'); } if(nameEl) nameEl.innerText=fd.skills[s]; }); }
+}
+function spawnRandomFruit(){ const keys=Object.keys(FRUITS); const key=keys[Math.floor(Math.random()*keys.length)]; const is=ISLANDS[Math.floor(Math.random()*ISLANDS.length)]; const ang=Math.random()*Math.PI*2; const rad=Math.random()*is.size*0.6; const x=is.x+Math.cos(ang)*rad, z=is.z+Math.sin(ang)*rad; const mesh=createFruitMesh(x,z,is.height-1,key); scene.add(mesh); fruitSpawns.push(mesh); document.getElementById('spawnStatus').innerHTML=`<span style="color:#${FRUITS[key].color.toString(16).padStart(6,'0')}">${FRUITS[key].emoji} ${FRUITS[key].name}</span><br>sa ${is.name}!`; }
+
+window.selectSkill=(key)=>{
+  if(!currentFruit){ alert("Kumain ka muna ng fruit!"); return; }
+  if(skillCooldown[key]){ alert(`${key} cooldown pa!`); return; }
+  selectedSkill=key;
+  document.querySelectorAll('.skill').forEach(el=>el.classList.remove('selected'));
+  const el=document.getElementById('skill'+key); if(el) el.classList.add('selected');
+  const skillName=FRUITS[currentFruit].skills[key];
+  document.getElementById('selectedInfo').innerText=`SELECTED: ${key} - ${skillName} - LEFT CLICK TO CAST!`;
+  document.getElementById('selectedInfo').style.display='block';
+  document.getElementById('castMode').innerText=`${key}=${skillName} READY - LEFT CLICK!`;
+  document.getElementById('castMode').style.color="#00ff88";
+  document.getElementById('enemyInfo').innerText=`${key} selected! Left Click para i-cast!`;
+  setTimeout(()=>{ document.getElementById('selectedInfo').style.display='none'; },2500);
+}
+
+function init(){
+  scene=new THREE.Scene(); scene.background=new THREE.Color(0x87ceeb); scene.fog=new THREE.Fog(0x87ceeb, 1000, 8000);
+  camera=new THREE.PerspectiveCamera(70, innerWidth/innerHeight, 0.1, 15000);
+  renderer=new THREE.WebGLRenderer({canvas:document.getElementById('gameCanvas'), antialias:false}); renderer.setSize(innerWidth,innerHeight); renderer.setPixelRatio(1);
+  scene.add(new THREE.DirectionalLight(0xffffff,1.1)); scene.add(new THREE.AmbientLight(0xffffff,0.8));
+  const ocean=new THREE.Mesh(new THREE.PlaneGeometry(18000,18000), new THREE.MeshBasicMaterial({color:0x0066aa})); ocean.rotation.x=-Math.PI/2; ocean.position.y=-0.5; scene.add(ocean);
+  ISLANDS.forEach(is=>{
+    const geo=new THREE.CylinderGeometry(is.size*0.96, is.size, is.height, 18); const mat=new THREE.MeshLambertMaterial({color:is.color}); const m=new THREE.Mesh(geo,mat); m.position.set(is.x, is.height/2 -1, is.z); scene.add(m);
+    for(let i=0;i<8;i++){ const ang=Math.random()*Math.PI*2; const rad=Math.random()*is.size*0.6; const x=is.x+Math.cos(ang)*rad, z=is.z+Math.sin(ang)*rad; if(getInfo(x,z).inside){ const e=createEnemy(x,z,is.height-1,"Bandit",0xff4444); scene.add(e); enemies.push(e); } }
+    if(is.boss){ const boss=createBoss(is.x, is.z-120, is.height-1, is.boss); scene.add(boss); enemies.push(boss); }
+  });
+  player=new THREE.Group(); const body=new THREE.Mesh(new THREE.BoxGeometry(1.8,3.5,1.8), new THREE.MeshLambertMaterial({color:0x00ff88})); body.position.y=1.75; player.add(body); const beacon=new THREE.Mesh(new THREE.SphereGeometry(1,8,8), new THREE.MeshBasicMaterial({color:0xffff00})); beacon.position.y=5; player.add(beacon); player.position.set(0,25,0); scene.add(player);
+  boat=new THREE.Mesh(new THREE.BoxGeometry(7,1.5,14), new THREE.MeshLambertMaterial({color:0x8B4513})); boat.visible=false; scene.add(boat);
+
+  // SPAWN BATAK NPC PLAYERS
+  BATAK_DATA.forEach((data, idx)=>{
+    const is=ISLANDS[idx % ISLANDS.length];
+    const ang=Math.random()*Math.PI*2; const rad=200 + Math.random()*300;
+    const x=is.x+Math.cos(ang)*rad, z=is.z+Math.sin(ang)*rad;
+    const batak=createBatakPlayer(x,z,is.height-1,data);
+    scene.add(batak); enemies.push(batak); batakPlayers.push(batak);
+  });
+  const listDiv=document.getElementById('batakNames');
+  listDiv.innerHTML=BATAK_DATA.map(d=>`<div style="margin:2px 0;color:#ff8888">• ${d.name} - ${FRUITS[d.fruit].emoji} ${d.title}</div>`).join('');
+
+  setTimeout(()=>spawnRandomFruit(),2000);
+  setInterval(()=>{ spawnCooldown--; document.getElementById('spawnTimer').innerText=spawnCooldown+"s"; if(spawnCooldown<=0){ spawnCooldown=60; spawnRandomFruit(); } },1000);
+
+  window.addEventListener('mousedown', (e)=>{
+    if(e.button===2){ isRightDown=true; document.getElementById('camHint').style.display='block'; document.getElementById('gameCanvas').style.cursor="grabbing"; e.preventDefault(); }
+    else if(e.button===0){
+      if(selectedSkill &&!skillCooldown[selectedSkill]){ castSelectedSkill(); }
+      else if(!selectedSkill){ attack(); }
+    }
+  });
+  window.addEventListener('mouseup', (e)=>{ if(e.button===2){ isRightDown=false; document.getElementById('camHint').style.display='none'; document.getElementById('gameCanvas').style.cursor="crosshair"; } });
+  window.addEventListener('contextmenu', e=>e.preventDefault());
+  window.addEventListener('mousemove', (e)=>{
+    mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+    const dot=document.getElementById('aimDot'); if(dot){ dot.style.left=e.clientX+'px'; dot.style.top=e.clientY+'px'; dot.style.display='block'; }
+    if(isRightDown){ yaw-=e.movementX*0.005; pitch+=e.movementY*0.005; pitch=Math.max(-1.3, Math.min(1.3, pitch)); }
+  });
+  window.addEventListener('keydown',e=>{
+    keys[e.code]=true; if(e.code==='Escape') location.reload();
+    if(e.code==='KeyI'){ const inv=document.getElementById('inventory'); inv.style.display=inv.style.display==='none'?'block':'none'; updateInventoryUI(); }
+    if(e.code==='KeyG'){ const g=document.getElementById('gacha'); g.style.display=g.style.display==='none'?'block':'none'; }
+    if(e.code==='KeyZ'){ selectSkill('Z'); }
+    if(e.code==='KeyX'){ selectSkill('X'); }
+    if(e.code==='KeyC'){ selectSkill('C'); }
+    if(e.code==='KeyV'){ selectSkill('V'); }
+    if(e.code==='KeyF'){ attack(); }
+    if(e.code==='KeyB'){ inBoat=!inBoat; boat.visible=inBoat; }
+    if(e.code==='KeyQ'){ yaw+=0.08; }
+    const n=parseInt(e.key); if(n>=1&&n<=4){ const is=ISLANDS[n-1]; if(is) player.position.set(is.x, is.height+5, is.z); }
+  });
+  window.addEventListener('keyup',e=>keys[e.code]=false);
+  document.getElementById('lvl').innerText=level; updateSkillUI();
+  animate();
+}
+
+function setCooldown(s,m){ skillCooldown[s]=true; const el=document.getElementById('skill'+s); if(el) el.classList.add('cooldown'); setTimeout(()=>{ skillCooldown[s]=false; if(el) el.classList.remove('cooldown'); if(selectedSkill===s){ selectedSkill=null; document.querySelectorAll('.skill').forEach(el=>el.classList.remove('selected')); document.getElementById('castMode').innerText="Pili ka skill Z X C V"; } },m); }
+function getMouseAimDirection(){ raycaster.setFromCamera(mouse, camera); return raycaster.ray.direction.clone().normalize(); }
+
+function castSelectedSkill(){
+  if(!selectedSkill ||!currentFruit) return;
+  const key=selectedSkill;
+  const aimDir=getMouseAimDirection();
+  const start=player.position.clone().add(new THREE.Vector3(0,2.8,0)).add(aimDir.clone().multiplyScalar(2));
+  const color=FRUITS[currentFruit].color;
+  if(key==="Z"){ createProj(start, aimDir, color, 60, 85); setCooldown('Z',1800); }
+  else if(key==="X"){ for(let i=0;i<3;i++) setTimeout(()=>createProj(start, aimDir.clone().add(new THREE.Vector3((Math.random()-0.5)*0.2, (Math.random()-0.5)*0.2, (Math.random()-0.5)*0.2)), color, 50, 75), i*120); setCooldown('X',2800); }
+  else if(key==="C"){
+    const targetPos=player.position.clone().add(aimDir.clone().multiplyScalar(14));
+    enemies.forEach(e=>{ if(targetPos.distanceTo(e.position)<14){ e.userData.hp-=90; updateHp(e); createHitEffect(e.position,color); createDamageText(e.position,90, e.userData.isBatak); checkDeath(e); } });
+    setCooldown('C',3200);
+  }
+  else if(key==="V"){
+    const next=player.position.clone().add(aimDir.clone().multiplyScalar(35));
+    if(getInfo(next.x,next.z).inside||inBoat||aimDir.y>0.1){ player.position.x=next.x; player.position.z=next.z; if(aimDir.y>0.15) player.position.y+=aimDir.y*25; }
+    createHitEffect(player.position,color);
+    setCooldown('V',4500);
+  }
+  document.getElementById('selectedInfo').innerText=`CASTED ${key}!`;
+  document.getElementById('selectedInfo').style.display='block';
+  setTimeout(()=>{ document.getElementById('selectedInfo').style.display='none'; selectedSkill=null; document.querySelectorAll('.skill').forEach(el=>el.classList.remove('selected')); document.getElementById('castMode').innerText="Pili ka skill Z X C V"; },600);
+}
+
+function attack(){
+  let hit=false; const aimDir=getMouseAimDirection();
+  enemies.forEach(e=>{
+    if(e.userData.hp<=0) return;
+    const dist = player.position.distanceTo(e.position);
+    const toEnemy=e.position.clone().sub(player.position).normalize();
+    const dot=aimDir.dot(toEnemy);
+    if(dist < 14 && dot > 0.15){
+      const dmg = Math.floor(Math.random()*20+55); e.userData.hp -= dmg; hit=true; updateHp(e);
+      createHitEffect(e.position.clone().add(new THREE.Vector3(0,2.5,0)), currentFruit?FRUITS[currentFruit].color:0xff4400);
+      createDamageText(e.position, dmg, e.userData.isBatak); checkDeath(e);
+    } else if(dist < 8.5){
+      const dmg = Math.floor(Math.random()*15+40); e.userData.hp -= dmg; hit=true; updateHp(e);
+      createHitEffect(e.position.clone().add(new THREE.Vector3(0,2.5,0)), 0xff4400);
+      createDamageText(e.position, dmg, e.userData.isBatak); checkDeath(e);
+    }
+  });
+  for(let i=fruitSpawns.length-1;i>=0;i--){
+    const f=fruitSpawns[i]; if(player.position.distanceTo(f.position)<18){
+      inventory.push(f.userData.fruitKey); updateInventoryUI(); for(let j=0;j<15;j++) createHitEffect(f.position, FRUITS[f.userData.fruitKey].color);
+      alert(`🎉 Nakuha mo ${FRUITS[f.userData.fruitKey].emoji} ${f.userData.fruitName} Fruit!`); scene.remove(f); fruitSpawns.splice(i,1);
+    }
+  }
+  if(!hit){ const swingPos = player.position.clone().add(new THREE.Vector3(0,2,0)).add(aimDir.clone().multiplyScalar(3.5)); createHitEffect(swingPos, 0xffffff); }
+}
+function updateHp(e){ const hpBar=e.getObjectByName("hpBar"); if(!hpBar) return; const scale=Math.max(0,e.userData.hp/e.userData.maxHP); hpBar.scale.x=scale; if(e===activeBoss || e.userData.isBatak){ document.getElementById('bossBar').style.display='block'; document.getElementById('bossName').innerText=e.userData.isBatak?`${e.userData.type} - ${e.userData.title} - ${e.userData.bounty}`:e.userData.type; document.getElementById('bossHpFill').style.width=(scale*100)+"%"; document.getElementById('bossHpText').innerText=`${Math.max(0,Math.floor(e.userData.hp))}/${e.userData.maxHP} - ${e.userData.isBatak?FRUITS[e.userData.fruit].name:''}`; } }
+function checkDeath(e){ if(e.userData.hp<=0){ for(let i=0;i<18;i++) createHitEffect(e.position, e.userData.isBatak?e.userData.color:0xffaa00); if(e.userData.isSea){ document.getElementById('bossBar').style.display='none'; activeBoss=null; level+=10; document.getElementById('lvl').innerText=level; seaBeasts=seaBeasts.filter(s=>s!==e); } else if(e.userData.isBoss){ document.getElementById('bossBar').style.display='none'; activeBoss=null; level+=5; document.getElementById('lvl').innerText=level; } else if(e.userData.isBatak){ document.getElementById('bossBar').style.display='none'; activeBoss=null; level+=10; document.getElementById('lvl').innerText=level; playerHP=Math.min(100, playerHP+40); document.getElementById('hp').innerText=playerHP; alert(`🔥 BATAK PLAYER DEFEATED!\n${e.userData.type}\n+10 LVL! +40 HP!\nBounty: ${e.userData.bounty}`); batakPlayers=batakPlayers.filter(b=>b!==e); setTimeout(()=>{ const is=ISLANDS[Math.floor(Math.random()*ISLANDS.length)]; const ang=Math.random()*Math.PI*2; const x=is.x+Math.cos(ang)*300, z=is.z+Math.sin(ang)*300; const data=BATAK_DATA[Math.floor(Math.random()*BATAK_DATA.length)]; const newBatak=createBatakPlayer(x,z,is.height-1,data); scene.add(newBatak); enemies.push(newBatak); batakPlayers.push(newBatak); }, 8000); } else { level+=1; document.getElementById('lvl').innerText=level; } scene.remove(e); enemies=enemies.filter(en=>en!==e); } }
+
+function updateBatakAI(){
+  batakPlayers.forEach(b=>{
+    if(b.userData.hp<=0) return;
+    const distToPlayer=player.position.distanceTo(b.position);
+    // chase player if near
+    if(distToPlayer<80){
+      if(distToPlayer>8){
+        const dir=player.position.clone().sub(b.position).normalize(); dir.y=0;
+        const nx=b.position.x+dir.x*0.9, nz=b.position.z+dir.z*0.9;
+        if(getInfo(nx,nz).inside){ b.position.x=nx; b.position.z=nz; b.position.y=getInfo(nx,nz).h+0.2; }
+      }
+      b.lookAt(player.position.x, b.position.y, player.position.z);
+      // attack with fruit skills
+      const now=Date.now();
+      if(now - b.userData.lastSkill > 1800 && distToPlayer<35){
+        b.userData.lastSkill=now;
+        const dir=player.position.clone().sub(b.position).normalize(); dir.y=0.1;
+        const start=b.position.clone().add(new THREE.Vector3(0,3,0)).add(dir.clone().multiplyScalar(2));
+        const color=b.userData.color;
+        const skillType=Math.floor(Math.random()*3);
+        if(skillType===0){ createProj(start, dir, color, 35, 70, true); }
+        else if(skillType===1){ for(let i=0;i<2;i++) setTimeout(()=>createProj(start, dir.clone().add(new THREE.Vector3((Math.random()-0.5)*0.3,0.1,(Math.random()-0.5)*0.3)), color, 25, 60, true), i*150); }
+        else { // dash to player
+          const dashPos=player.position.clone().add(new THREE.Vector3((Math.random()-0.5)*6,0,(Math.random()-0.5)*6));
+          if(getInfo(dashPos.x,dashPos.z).inside){ b.position.x=dashPos.x; b.position.z=dashPos.z; b.position.y=getInfo(dashPos.x,dashPos.z).h+0.2; createHitEffect(b.position, color); }
+        }
+      }
+      if(distToPlayer<5 && Math.random()<0.08){
+        playerHP-=12; document.getElementById('hp').innerText=playerHP; createHitEffect(player.position, b.userData.color);
+        if(playerHP<=0){ playerHP=100; player.position.set(0,25,0); document.getElementById('hp').innerText=100; alert(`💀 Pinatay ka ni ${b.userData.type}! Batak masyado!`); }
+      }
+      if(!activeBoss){ activeBoss=b; }
+    }
+  });
+}
+
+function updateEnemies(){
+  let nearest=null, nd=999;
+  if(inBoat && getInfo(player.position.x, player.position.z).name==="Ocean" && seaBeasts.length===0 && Math.random()<0.015){ const ang=Math.random()*Math.PI*2; const x=player.position.x+Math.cos(ang)*100, z=player.position.z+Math.sin(ang)*100; const beast=createSeaBeast(x,z); scene.add(beast); seaBeasts.push(beast); enemies.push(beast); }
+  [...enemies.filter(e=>!e.userData.isBatak),...seaBeasts].forEach(e=>{
+    if(e.userData.hp<=0) return; const d=player.position.distanceTo(e.position); if(d<nd &&!e.userData.isBatak){ nd=d; nearest=e; }
+    if(e.userData.isBoss || e.userData.isSea){
+      if(d<120){ if(!activeBoss || activeBoss.userData.isBatak){ activeBoss=e; document.getElementById('bossBar').style.display='block'; document.getElementById('bossName').innerText=e.userData.type; document.getElementById('bossHpFill').style.width=(e.userData.hp/e.userData.maxHP*100)+"%"; } if(d>7){ const dir=player.position.clone().sub(e.position).normalize(); dir.y=0; const nx=e.position.x+dir.x*(e.userData.isSea?1.3:0.7), nz=e.position.z+dir.z*(e.userData.isSea?1.3:0.7); if(getInfo(nx,nz).inside || e.userData.isSea){ e.position.x=nx; e.position.z=nz; if(!e.userData.isSea) e.position.y=getInfo(nx,nz).h+0.2; } } e.lookAt(player.position.x, e.position.y, player.position.z); if(d<9 && Math.random()<0.06){ playerHP-= e.userData.isSea?28:20; document.getElementById('hp').innerText=playerHP; createHitEffect(player.position,0xff0000); if(playerHP<=0){ playerHP=100; player.position.set(0,25,0); document.getElementById('hp').innerText=100; inBoat=false; boat.visible=false; } } }
+    } else { if(d<40 && d>2.5){ const dir=player.position.clone().sub(e.position).normalize(); dir.y=0; const nx=e.position.x+dir.x*0.55, nz=e.position.z+dir.z*0.55; if(getInfo(nx,nz).inside){ e.position.x=nx; e.position.z=nz; e.position.y=getInfo(nx,nz).h+0.2; } e.lookAt(player.position.x, e.position.y, player.position.z); } if(d<4 && Math.random()<0.04){ playerHP-=6; document.getElementById('hp').innerText=playerHP; if(playerHP<=0){ playerHP=100; player.position.set(0,25,0); document.getElementById('hp').innerText=100; } } }
+  });
+  updateBatakAI();
+  // find nearest batak if closer
+  let nearestBatak=null, ndBatak=999;
+  batakPlayers.forEach(b=>{ const d=player.position.distanceTo(b.position); if(d<ndBatak){ ndBatak=d; nearestBatak=b; } });
+  if(nearestBatak && ndBatak<60){
+    document.getElementById('enemyInfo').innerHTML=`<span style="color:#ff4444">🔥 ${nearestBatak.userData.type} LVL ${nearestBatak.userData.lvl}<br>${FRUITS[nearestBatak.userData.fruit].emoji} ${nearestBatak.userData.fruit.toUpperCase()} - HP:${Math.floor(nearestBatak.userData.hp)}/400</span>`;
+  } else if(nearest && nd<70){
+    document.getElementById('enemyInfo').innerText=`${nearest.userData.isSea?'🌊 ': nearest.userData.isBoss?'👑 ':''}${nearest.userData.type} HP:${Math.floor(nearest.userData.hp)}`;
+  }
+}
+function updateEffects(){
+  for(let i=hitEffects.length-1;i>=0;i--){ const p=hitEffects[i]; p.position.add(p.userData.vel); p.userData.vel.y-=0.06; p.userData.life--; p.scale.multiplyScalar(0.94); if(p.userData.life<=0){ scene.remove(p); hitEffects.splice(i,1); } }
+  for(let i=damageTexts.length-1;i>=0;i--){ const t=damageTexts[i]; t.position.add(t.userData.vel); t.userData.life--; t.material.opacity=t.userData.life/50; if(t.userData.life<=0){ scene.remove(t); damageTexts.splice(i,1); } }
+  for(let i=projectiles.length-1;i>=0;i--){
+    const p=projectiles[i]; p.position.add(p.userData.dir.clone().multiplyScalar(p.userData.isBatak?4:3.5)); p.userData.life--;
+    if(p.userData.isBatak){
+      if(p.position.distanceTo(player.position)<4){
+        playerHP-=p.userData.dmg; document.getElementById('hp').innerText=playerHP; createHitEffect(player.position, p.material.color.getHex()); createDamageText(player.position, p.userData.dmg, true);
+        scene.remove(p); projectiles.splice(i,1); if(playerHP<=0){ playerHP=100; player.position.set(0,25,0); document.getElementById('hp').innerText=100; }
+        continue;
+      }
+    } else {
+      enemies.forEach(e=>{ if(e.userData.hp<=0) return; if(e===player) return; if(p.position.distanceTo(e.position)< (e.userData.isSea?8: e.userData.isBatak?4.5:4)){ const dmg=p.userData.dmg+Math.floor(Math.random()*10); e.userData.hp-=dmg; updateHp(e); createHitEffect(e.position,currentFruit?FRUITS[currentFruit].color:0xff4400); createDamageText(e.position,dmg, e.userData.isBatak); checkDeath(e); scene.remove(p); projectiles.splice(i,1); } });
+    }
+    if(p.userData.life<=0){ scene.remove(p); projectiles.splice(i,1); }
+  }
+  for(let i=fruitSpawns.length-1;i>=0;i--){ const f=fruitSpawns[i]; f.rotation.y+=0.04; const baseH = getInfo(f.position.x, f.position.z).h; f.position.y = baseH + 4 + Math.sin(Date.now()*0.004 + f.position.x)*1.2; if(player.position.distanceTo(f.position)<13){ inventory.push(f.userData.fruitKey); updateInventoryUI(); for(let j=0;j<18;j++) createHitEffect(f.position, FRUITS[f.userData.fruitKey].color); alert(`🎉 AUTO PICKUP! ${FRUITS[f.userData.fruitKey].emoji} ${f.userData.fruitName}!`); scene.remove(f); fruitSpawns.splice(i,1); } }
+}
+// JOYSTICK VARIABLE
+let joyInput = {x:0, y:0};
+const joy = document.getElementById('joy');
+const stick = document.getElementById('stick');
+if(joy){
+  joy.addEventListener('touchmove', e=>{
+    e.preventDefault();
+    let rect = joy.getBoundingClientRect();
+    let t = e.touches[0];
+    let dx = t.clientX - (rect.left+65);
+    let dy = t.clientY - (rect.top+65);
+    let dist = Math.min(50, Math.hypot(dx,dy));
+    let ang = Math.atan2(dy,dx);
+    joyInput.x = Math.cos(ang)*dist/50;
+    joyInput.y = Math.sin(ang)*dist/50;
+    stick.style.transform = `translate(${Math.cos(ang)*dist}px, ${Math.sin(ang)*dist}px)`;
+  },{passive:false});
+  joy.addEventListener('touchend', ()=>{
+    joyInput.x=0; joyInput.y=0;
+    stick.style.transform=`translate(0px,0px)`;
+  });
+}
+document.getElementById('atk')?.addEventListener('touchstart', ()=>{
+  // lagay mo dito attack mo, halimbawa: doAttack();
+  console.log("ATK!");
+});
+
+function animate(){
+  requestAnimationFrame(animate);
+  if(keys['KeyQ']) yaw+=0.05;
+
+  const forward=new THREE.Vector3(0,0,-1).applyAxisAngle(new THREE.Vector3(0,1,0),yaw);
+  const right=new THREE.Vector3(1,0,0).applyAxisAngle(new THREE.Vector3(0,1,0),yaw);
+  let next=player.position.clone();
+  const moveSpeed=inBoat? (keys['ShiftLeft']?14:7) : (keys['ShiftLeft']?4:2.5);
+
+  // KEYBOARD (LAPTOP)
+  if(keys['KeyW']) next.addScaledVector(forward,moveSpeed);
+  if(keys['KeyS']) next.addScaledVector(forward,-moveSpeed);
+  if(keys['KeyA']) next.addScaledVector(right,-moveSpeed);
+  if(keys['KeyD']) next.addScaledVector(right,moveSpeed);
+
+  // JOYSTICK (MOBILE) - DAGDAG LANG TO
+  if(Math.abs(joyInput.y) > 0.1) next.addScaledVector(forward, -joyInput.y * moveSpeed);
+  if(Math.abs(joyInput.x) > 0.1) next.addScaledVector(right, joyInput.x * moveSpeed);
+
+  const ni=getInfo(next.x,next.z);
+  if(inBoat || ni.inside){ player.position.x=next.x; player.position.z=next.z; }
+  if(!inBoat){
+    const g=getInfo(player.position.x, player.position.z);
+    if(g.inside) player.position.y=g.h+0.3;
+    else player.position.set(0,25,0);
+  } else {
+    player.position.y=1.1;
+    boat.position.set(player.position.x,0.3,player.position.z);
+    boat.rotation.y=yaw;
+  }
+  player.rotation.y=yaw;
+  updateEnemies();
+  updateEffects();
+  const dist=26; const height=14;
+  const camX=player.position.x + Math.sin(yaw)*Math.cos(pitch)*dist;
+  const camZ=player.position.z + Math.cos(yaw)*Math.cos(pitch)*dist;
+  const camY=player.position.y + Math.sin(pitch)*dist + height;
+  camera.position.lerp(new THREE.Vector3(camX, camY, camZ),0.12);
+  camera.lookAt(player.position.x, player.position.y+2, player.position.z);
+  document.getElementById('currentIsland').innerText=getInfo(player.position.x,player.position.z).name;
+  renderer.render(scene,camera);
+}
+window.addEventListener('resize',()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); });
+// === SKILL AT ATTACK PARA SA MOBILE ===
+function triggerAttack(){ 
+  // PALITAN MO NG FUNCTION MO SA GAME MO
+  if(typeof doAttack === 'function') doAttack();
+  if(typeof attack === 'function') attack();
+  console.log("ATK!");
+}
+function triggerSkill1(){ 
+  // Halimbawa: KeyC ang skill mo
+  if(keys) keys['KeyC'] = true; setTimeout(()=>keys['KeyC']=false,100);
+  if(typeof useSkill1 === 'function') useSkill1();
+  console.log("SKILL C");
+}
+function triggerSkill2(){
+  if(keys) keys['KeyX'] = true; setTimeout(()=>keys['KeyX']=false,100);
+  if(typeof useSkill2 === 'function') useSkill2();
+  console.log("SKILL X");
+}
+function triggerSkill3(){
+  if(keys) keys['KeyZ'] = true; setTimeout(()=>keys['KeyZ']=false,100);
+  if(typeof useSkill3 === 'function') useSkill3();
+  console.log("SKILL Z");
+}
+
+document.getElementById('atk').addEventListener('touchstart', e=>{ e.preventDefault(); triggerAttack(); });
+document.getElementById('skill1').addEventListener('touchstart', e=>{ e.preventDefault(); triggerSkill1(); });
+document.getElementById('skill2').addEventListener('touchstart', e=>{ e.preventDefault(); triggerSkill2(); });
+document.getElementById('skill3').addEventListener('touchstart', e=>{ e.preventDefault(); triggerSkill3(); });
+</script>
+<div id="mobileUI">
+  <div id="leftJoy"><div class="joystick" id="joy"><div class="stick" id="stick"></div></div></div>
+  <div id="rightBtns">
+    <div class="mBtn" id="skill3" style="background:#9b59b6;">Z</div>
+    <div class="mBtn" id="skill2" style="background:#3498db;">X</div>
+    <div class="mBtn" id="skill1" style="background:#2ecc71;">C</div>
+    <div class="mBtn" id="atk" style="background:#e74c3c;width:85px;height:85px;">ATK</div>
+  </div>
+</div>
+<style>
+#mobileUI{position:fixed;bottom:0;left:0;width:100%;height:220px;pointer-events:none;z-index:999}
+#leftJoy{position:absolute;left:20px;bottom:30px;pointer-events:auto}
+#rightBtns{position:absolute;right:20px;bottom:30px;pointer-events:auto;display:flex;flex-direction:column;gap:12px;align-items:center}
+.joystick{width:130px;height:130px;background:rgba(255,255,255,0.15);border-radius:50%;border:2px solid rgba(255,255,255,0.3);position:relative}
+.stick{width:60px;height:60px;background:rgba(255,255,255,0.7);border-radius:50%;position:absolute;left:35px;top:35px}
+.mBtn{width:60px;height:60px;background:#ff4757;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;border:2px solid white;font-size:18px}
+.mBtn:active{transform:scale(0.9)}
+@media(min-width:900px){#mobileUI{display:none}}
+</style>
+<style>
+#mobileUI{position:fixed;bottom:0;left:0;width:100%;height:180px;pointer-events:none;z-index:999}
+#leftJoy{position:absolute;left:20px;bottom:30px;pointer-events:auto}
+#rightBtns{position:absolute;right:20px;bottom:40px;pointer-events:auto}
+.joystick{width:130px;height:130px;background:rgba(255,255,255,0.15);border-radius:50%;border:2px solid rgba(255,255,255,0.3);position:relative}
+.stick{width:60px;height:60px;background:rgba(255,255,255,0.7);border-radius:50%;position:absolute;left:35px;top:35px}
+.mBtn{width:75px;height:75px;background:#ff4757;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;border:2px solid white}
+@media(min-width:900px){#mobileUI{display:none}}
+</style>
+</body>
+</html>
